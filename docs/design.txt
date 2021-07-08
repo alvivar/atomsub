@@ -1,0 +1,15 @@
+
+
+Subs Actor
+    Running
+
+Main Thread New client detected
+    New Reader & Writter actors
+
+Reader Actor reads a message
+    Sends message to Subs Actor
+
+Subs Actor when the Readers sends a message
+
+
+Reader read something
