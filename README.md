@@ -2,10 +2,10 @@
 
 _Work in progress_.
 
-Simple PubSub Server Client in Rust. Designed with the Actors pattern and
-threads.
+Simple PubSub Server Client in Rust.
 
-I know, it should be async, but maybe later.
+Right now prototyping, it could be Actors, Async, just polling, Tokyo vs Smol,
+don't know yet.
 
 ## Inspiration
 
