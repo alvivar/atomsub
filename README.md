@@ -2,8 +2,9 @@
 
 Simple PubSub Server in Rust.
 
-It uses Polling from smol in the main thread to detect connections, read and
-write. It handles subscriptions in another thread.
+It uses [**Polling**](https://github.com/smol-rs/polling) from
+[**smol**](https://github.com/smol-rs/smol) in the main thread to detect
+connections, read and write. It handles subscriptions in another thread.
 
 ## How it works
 
