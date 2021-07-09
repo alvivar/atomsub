@@ -58,13 +58,10 @@ impl Subs {
 
                 Ok(Cmd::Call(key, value)) => {
                     if let Some(subs) = self.registry.get(&key) {
-                        let msg = format!("{} {}", key, value);
                         let mut writers = self.writers.lock().unwrap();
-
                         for id in subs {
                             if let Some(conn) = writers.get_mut(id) {
-                                conn.data = msg.to_owned().into();
-
+                                conn.data = format!("{} {}", key, value).into();
                                 self.poller
                                     .modify(&conn.socket, Event::writable(conn.id))
                                     .unwrap();
