@@ -1,13 +1,11 @@
 # atomsub
 
-_Work in progress_.
+Simple PubSub Server in Rust.
 
-Simple PubSub Server Client in Rust.
+It uses Polling from smol in the main thread to detect connections, read and
+write. It handles subscriptions in another thread.
 
-Right now prototyping, it could be Actors, Async, just polling, Tokyo vs Smol,
-don't know yet.
-
-## Inspiration
+## Unrelated inspiration
 
 - [Actors with Tokio](https://ryhl.io/blog/actors-with-tokio/)
 - [Telnet chat](https://github.com/Darksonn/telnet-chat)
