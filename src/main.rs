@@ -10,11 +10,11 @@ use std::{
 use polling::{Event, Poller};
 
 mod conn;
-mod parse;
+mod msg;
 mod subs;
 
 use conn::Connection;
-use parse::parse;
+use msg::parse;
 use subs::Subs;
 
 fn main() -> io::Result<()> {
@@ -26,12 +26,12 @@ fn main() -> io::Result<()> {
     poller.add(&server, Event::readable(0))?;
     let poller = Arc::new(poller);
 
-    let mut read_map = HashMap::<usize, Connection>::new();
-    let write_map = HashMap::<usize, Connection>::new();
-    let write_map = Arc::new(Mutex::new(write_map));
+    let mut readers = HashMap::<usize, Connection>::new();
+    let writers = HashMap::<usize, Connection>::new();
+    let writers = Arc::new(Mutex::new(writers));
 
     // Subs
-    let mut subs = Subs::new(write_map.clone(), poller.clone());
+    let mut subs = Subs::new(writers.clone(), poller.clone());
     let subs_tx = subs.tx.clone();
     thread::spawn(move || subs.handle());
 
@@ -54,11 +54,16 @@ fn main() -> io::Result<()> {
 
                     // Register the reading socket for events.
                     poller.add(&read_socket, Event::readable(id))?;
-                    read_map.insert(id, Connection::new(id, read_socket, addr));
+                    readers.insert(id, Connection::new(id, read_socket, addr));
 
                     // Register the writing socket for events.
-                    poller.add(&write_socket, Event::writable(id))?;
-                    read_map.insert(id, Connection::new(id, write_socket, addr));
+                    poller.add(&write_socket, Event::none(id))?;
+                    writers
+                        .lock()
+                        .unwrap()
+                        .insert(id, Connection::new(id, write_socket, addr));
+
+                    // One more.
                     id += 1;
 
                     // The server continues listening for more clients, always 0.
@@ -66,18 +71,16 @@ fn main() -> io::Result<()> {
                 }
 
                 id if ev.readable => {
-                    if let Some(conn) = read_map.get_mut(&id) {
+                    if let Some(conn) = readers.get_mut(&id) {
                         handle_reading(conn);
                         poller.modify(&conn.socket, Event::readable(id))?;
 
-                        // Subs handling
-                        if let Ok(utf8) = from_utf8(&conn.cache) {
+                        // Parse the message.
+                        if let Ok(utf8) = from_utf8(&conn.data) {
                             let msg = parse(utf8);
                             let op = msg.op.as_str();
                             let key = msg.key;
                             let val = msg.value;
-
-                            println!("Parse {} {} {}", op, key, val);
 
                             match op {
                                 // A subscription and a first message.
@@ -114,16 +117,15 @@ fn main() -> io::Result<()> {
                         // Forget it, it died.
                         if conn.closed {
                             poller.delete(&conn.socket)?;
-                            read_map.remove(&id);
+                            readers.remove(&id);
                         }
                     }
                 }
 
                 id if ev.writable => {
-                    let mut write_map = write_map.lock().unwrap();
+                    let mut write_map = writers.lock().unwrap();
                     if let Some(conn) = write_map.get_mut(&id) {
                         handle_writing(conn);
-                        poller.modify(&conn.socket, Event::writable(id))?;
 
                         // Forget it, it died.
                         if conn.closed {
@@ -133,7 +135,7 @@ fn main() -> io::Result<()> {
                     }
                 }
 
-                // Events that I don't care. Do they happen?
+                // Events that I don't care. Probably
                 _ => (),
             }
         }
@@ -141,13 +143,10 @@ fn main() -> io::Result<()> {
 }
 
 fn handle_reading(conn: &mut Connection) {
-    conn.cache = match read(conn) {
-        Ok(data) => {
-            println!("Connection #{} reading: {:?}", conn.id, data);
-            data
-        }
+    conn.data = match read(conn) {
+        Ok(data) => data,
         Err(err) => {
-            println!("Connection #{} broken, failed read: {}", conn.id, err);
+            println!("Connection #{} broken, read failed: {}", conn.id, err);
             conn.closed = true;
             return;
         }
@@ -155,9 +154,9 @@ fn handle_reading(conn: &mut Connection) {
 }
 
 fn handle_writing(conn: &mut Connection) {
-    match conn.socket.write(&conn.cache) {
-        Ok(_) => println!("Writing {:?}", conn.cache),
-        Err(err) => println!("Connection #{} lost, failed write: {}", conn.id, err),
+    if let Err(err) = conn.socket.write(&conn.data) {
+        println!("Connection #{} broken, write failed: {}", conn.id, err);
+        conn.closed = true;
     }
 }
 
