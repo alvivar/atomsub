@@ -33,7 +33,7 @@ pub fn parse(text: &str) -> Msg {
                     op.push(c);
 
                     // The firts non-space found is the (op)erator. Separated or
-                    // not by a space.
+                    // not by space.
                     next = 1;
                 }
 
@@ -43,7 +43,7 @@ pub fn parse(text: &str) -> Msg {
 
                 _ => {
                     // @doubt There may be a way to push the rest of the
-                    // iterator instead of moving one by one after this point.
+                    // iterator instead of one by one.
                     value.push(c);
                 }
             },
