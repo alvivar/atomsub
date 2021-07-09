@@ -135,7 +135,7 @@ fn main() -> io::Result<()> {
                     }
                 }
 
-                // Events that I don't care. Probably
+                // Events that I don't care. Probably Event::none?
                 _ => (),
             }
         }
