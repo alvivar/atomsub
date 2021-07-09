@@ -4,7 +4,7 @@ pub struct Connection {
     pub id: usize,
     pub socket: TcpStream,
     pub addr: SocketAddr,
-    pub cache: Vec<u8>,
+    pub data: Vec<u8>,
     pub closed: bool,
 }
 
@@ -16,7 +16,7 @@ impl Connection {
             id,
             socket,
             addr,
-            cache,
+            data: cache,
             closed: false,
         }
     }
